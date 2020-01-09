@@ -12,21 +12,16 @@
 %global gcc_version 5.3.1
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 10
+%global gcc_release 6
 %global mpc_version 0.8.1
 %global _unpackaged_files_terminate_build 0
 %global multilib_64_archs sparc64 ppc64 s390x x86_64
-%ifarch %{ix86} x86_64 ppc ppc64 ppc64le ppc64p7 s390 s390x %{arm} aarch64
-%global attr_ifunc 1
-%else
-%global attr_ifunc 0
-%endif
 %ifarch x86_64
 %global multilib_32_arch i686
 %endif
-Summary: C++ compatibility runtime library for SAP applications
+Summary: SAP HANA based on GCC 5
 Name: %{?scl_prefix}c++-5
-ExclusiveArch: x86_64 ppc64 ppc64le
+ExclusiveArch: x86_64
 
 Version: %{gcc_version}
 Release: %{gcc_release}%{?dist}
@@ -65,10 +60,6 @@ BuildRequires: gdb
 BuildRequires: glibc-devel >= 2.4.90-13
 BuildRequires: elfutils-devel >= 0.147
 BuildRequires: elfutils-libelf-devel >= 0.147
-%ifarch ppc ppc64 ppc64le ppc64p7 s390 s390x sparc sparcv9 alpha
-# Make sure glibc supports TFmode long double
-BuildRequires: glibc >= 2.3.90-35
-%endif
 %ifarch %{multilib_64_archs} sparcv9 ppc
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -89,13 +80,8 @@ Requires: binutils >= 2.19.51.0.14-33
 # Make sure gdb will understand DW_FORM_strp
 Conflicts: gdb < 5.1-2
 Requires: glibc-devel >= 2.2.90-12
-%ifarch ppc ppc64 ppc64le ppc64p7 s390 s390x sparc sparcv9 alpha
-# Make sure glibc supports TFmode long double
-Requires: glibc >= 2.3.90-35
-%endif
 Requires: libgcc >= 4.1.2-43
 Requires: libgomp >= 4.4.4-13
-Requires: libstdc++ >= 4.4.4-13
 BuildRequires: gmp-devel >= 4.1.2-8
 BuildRequires: mpfr-devel >= 2.2.1
 %if 0%{?rhel} >= 7
@@ -103,11 +89,6 @@ BuildRequires: libmpc-devel >= 0.8.1
 %endif
 AutoReq: true
 AutoProv: false
-%ifarch sparc64 ppc64 ppc64le s390x x86_64 ia64
-Provides: liblto_plugin.so.0()(64bit)
-%else
-Provides: liblto_plugin.so.0
-%endif
 %global oformat %{nil}
 %global oformat2 %{nil}
 %ifarch %{ix86}
@@ -117,27 +98,7 @@ Provides: liblto_plugin.so.0
 %global oformat OUTPUT_FORMAT(elf64-x86-64)
 %global oformat2 OUTPUT_FORMAT(elf32-i386)
 %endif
-%ifarch ppc
-%global oformat OUTPUT_FORMAT(elf32-powerpc)
-%global oformat2 OUTPUT_FORMAT(elf64-powerpc)
-%endif
-%ifarch ppc64
-%global oformat OUTPUT_FORMAT(elf64-powerpc)
-%global oformat2 OUTPUT_FORMAT(elf32-powerpc)
-%endif
-%ifarch s390
-%global oformat OUTPUT_FORMAT(elf32-s390)
-%endif
-%ifarch s390x
-%global oformat OUTPUT_FORMAT(elf64-s390)
-%global oformat2 OUTPUT_FORMAT(elf32-s390)
-%endif
-%ifarch ia64
-%global oformat OUTPUT_FORMAT(elf64-ia64-little)
-%endif
-%ifarch ppc64le
-%global oformat OUTPUT_FORMAT(elf64-powerpcle)
-%endif
+Requires: libstdc++ >= 4.4.4-13
 
 Patch0: gcc5-hack.patch
 Patch1: gcc5-java-nomulti.patch
@@ -163,30 +124,10 @@ Patch1004: gcc5-libstdc++44-xfail.patch
 Patch1005: gcc5-rh1118870.patch
 Patch1006: gcc5-isl-dl2.patch
 
-%if 0%{?rhel} >= 7
-%global nonsharedver 48
-%else
-%global nonsharedver 44
-%endif
-
-%if 0%{?scl:1}
-%global _gnu %{nil}
-%else
-%global _gnu 7E
-%endif
-%ifarch sparcv9
-%global gcc_target_platform sparc64-%{_vendor}-%{_target_os}%{?_gnu}
-%endif
-%ifarch ppc
-%global gcc_target_platform ppc64-%{_vendor}-%{_target_os}%{?_gnu}
-%endif
-%ifnarch sparcv9 ppc
 %global gcc_target_platform %{_target_platform}
-%endif
 
 %description
-This package provides runtime compatibility libraries for use by SAP
-application binaries only.
+This carries runtime compatibility libraries needed for SAP HANA.
 
 %prep
 %setup -q -n gcc-%{version}-%{DATE} -a 1
@@ -241,23 +182,6 @@ LC_ALL=C sed -i -e 's/\xa0/ /' gcc/doc/options.texi
 
 sed -i -e 's/Common Driver Var(flag_report_bug)/& Init(1)/' gcc/common.opt
 
-%ifarch ppc
-if [ -d libstdc++-v3/config/abi/post/powerpc64-linux-gnu ]; then
-  mkdir -p libstdc++-v3/config/abi/post/powerpc64-linux-gnu/64
-  mv libstdc++-v3/config/abi/post/powerpc64-linux-gnu/{,64/}baseline_symbols.txt
-  mv libstdc++-v3/config/abi/post/powerpc64-linux-gnu/{32/,}baseline_symbols.txt
-  rm -rf libstdc++-v3/config/abi/post/powerpc64-linux-gnu/32
-fi
-%endif
-%ifarch sparc
-if [ -d libstdc++-v3/config/abi/post/sparc64-linux-gnu ]; then
-  mkdir -p libstdc++-v3/config/abi/post/sparc64-linux-gnu/64
-  mv libstdc++-v3/config/abi/post/sparc64-linux-gnu/{,64/}baseline_symbols.txt
-  mv libstdc++-v3/config/abi/post/sparc64-linux-gnu/{32/,}baseline_symbols.txt
-  rm -rf libstdc++-v3/config/abi/post/sparc64-linux-gnu/32
-fi
-%endif
-
 %build
 
 # Undo the broken autoconf change in recent Fedora versions
@@ -294,11 +218,7 @@ CONFIGURE_OPTS="\
 	--prefix=%{_prefix} --mandir=%{_mandir} --infodir=%{_infodir} \
 	--with-bugurl=http://bugzilla.redhat.com/bugzilla \
 	--enable-shared --enable-threads=posix --enable-checking=release \
-%ifarch ppc64le
-	--enable-targets=powerpcle-linux --disable-multilib \
-%else
 	--enable-multilib \
-%endif
 	--with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions \
 	--enable-gnu-unique-object \
 	--enable-linker-build-id \
@@ -314,34 +234,11 @@ CONFIGURE_OPTS="\
 	--disable-libssp \
 	--disable-libatomic \
 	--disable-libcilkrts \
-	--without-isl \
 	--disable-libmpx \
 %if 0%{?rhel} < 7
-	--with-mpc=`pwd`/mpc-install \
+        --with-mpc=`pwd`/mpc-install \
 %endif
-%if 0%{?rhel} >= 7
-%if %{attr_ifunc}
-        --enable-gnu-indirect-function \
-%endif
-%endif
-%ifarch ppc ppc64 ppc64le ppc64p7
-	--enable-secureplt \
-%endif
-%ifarch ppc ppc64 ppc64p7
-%if 0%{?rhel} >= 7
-	--with-cpu-32=power7 --with-tune-32=power7 --with-cpu-64=power7 --with-tune-64=power7 \
-%else
-	--with-cpu-32=power4 --with-tune-32=power6 --with-cpu-64=power4 --with-tune-64=power6 \
-%endif
-%endif
-%ifarch ppc64le
-%if 0%{?rhel} >= 7
-	--with-cpu-32=power8 --with-tune-32=power8 --with-cpu-64=power8 --with-tune-64=power8 \
-%endif
-%endif
-%ifarch ppc
-	--build=%{gcc_target_platform} --target=%{gcc_target_platform} --with-cpu=default32
-%endif
+	--without-isl \
 %ifarch %{ix86} x86_64
 	--with-tune=generic \
 %endif
@@ -374,8 +271,6 @@ cd obj-%{gcc_target_platform}
 
 TARGET_PLATFORM=%{gcc_target_platform}
 cp %{gcc_target_platform}/libstdc++-v3/src/.libs/libstdc++.so.6.0.* %{buildroot}%{_root_prefix}/%{_lib}/compat-sap-c++-%{gcc_version}.so
-cd %{buildroot}%{_root_prefix}/%{_lib}/
-ln -sf compat-sap-c++-%{gcc_version}.so %{buildroot}%{_root_prefix}/%{_lib}/compat-sap-c++-5.so
 
 %check
 cd obj-%{gcc_target_platform}
@@ -419,23 +314,8 @@ rm -rf %{buildroot}
 %dir %{_root_prefix}
 %dir %{_root_prefix}/%{_lib}
 %{_root_prefix}/%{_lib}/compat-sap-c++-%{gcc_version}.so
-%{_root_prefix}/%{_lib}/compat-sap-c++-5.so
 
 %changelog
-* Thu Aug 04 2016 Marek Polacek <polacek@redhat.com> 5.3.1-10
-- add compat-sap-c++-5.so symlink (#1365181)
-
-* Thu Aug 04 2016 Marek Polacek <polacek@redhat.com> 5.3.1-9
-- update Description again (#1351527)
-- enable on ppc64 (#1363851)
-- enable on ppc64le (#1363846, #1363853)
-
-* Thu Jul 07 2016 Marek Polacek <polacek@redhat.com> 5.3.1-8
-- update Description (#1351527)
-
-* Wed May 25 2016 Marek Polacek <polacek@redhat.com> 5.3.1-7
-- update Summary
-
 * Thu May 12 2016 Marek Polacek <polacek@redhat.com> 5.3.1-6
 - update from DTS gcc-5.3.1-6
 
